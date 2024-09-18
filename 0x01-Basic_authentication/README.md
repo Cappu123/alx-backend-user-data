@@ -220,8 +220,158 @@ Update the method `def authorization_header(self, request=None) -> str:`in `api/
 * If `request` doesn't contain the header key `Authorization`, returns `None`
 * Otherwise, return the value of the header request `Authorization`
 Update the file `api/v1/app.py`:
-* Created   
+* Create a variable `auth` initialized to `None` after the `CORS` definitions
+* Based on the environment variable `AUTH_TYPE`, load and assign the right instance of authentication to auth
+	* if `auth`
+		* import `Auth` from `api.v1.auth.auth`
+		* create an instance of `Auth` and assign it to the variable `auth`
+Now the biggest piece is the filtering of each request. For that you will use the Flask method [before_request](https://flask.palletsprojects.com/en/1.1.x/api/#flask.Blueprint.before_request)
+* Add a method in `api/v1/app.py` to handler `before_request`
+	* if `auth` is `None`, do nothing
+	* if `request.path` is not part of this list `['/api/v1/status/', '/api/v1/unauthorized', '/api/v1/forbidden/']`, do nothing - you must use the method `require_auth` from the `auth` instance
+	* if `auth.authorization_header(request)` returns `None`, raise the error `401` - you must use `abort`
+In the first terminal:
+```
+bob@dylan:~$ API_HOST=0.0.0.0 API_PORT=5000 AUTH_TYPE=auth python3 -m api.v1.app
+ * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
+....
+```
+In a second terminal:
+```
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/status"
+{
+  "status": "OK"
+}
+bob@dylan:~$ 
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/status/"
+{
+  "status": "OK"
+}
+bob@dylan:~$ 
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/users"
+{
+  "error": "Unauthorized"
+}
+bob@dylan:~$
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/users" -H "Authorization: Test"
+{
+  "error": "Forbidden"
+}
+bob@dylan:~$
+```
+### 6. Basic auth
+Create a class `BasicAuth` that inherits from `Auth`. For the moment this class will be empty.
+Update `api/v1/app.py for using `BasicAuth` class instead of `Auth` depending of the value of the environment variable `AUTH_TYPE`, If `AUTH_TYPE` is equal to `basic_auth`:
+* import `BasicAuth` from `api.v1.auth.basic_auth
+* create an instance of `BasicAuth` and assign it to the variable `auth`
+Otherwise, keep the previous mechanism with `auth` an instance of `Auth`.
+In the first terminal:
+```
+bob@dylan:~$ API_HOST=0.0.0.0 API_PORT=5000 AUTH_TYPE=basic_auth python3 -m api.v1.app
+ * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
+....
+```
+In a second terminal:
+```
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/status"
+{
+  "status": "OK"
+}
+bob@dylan:~$
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/status/"
+{
+  "status": "OK"
+}
+bob@dylan:~$
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/users"
+{
+  "error": "Unauthorized"
+}
+bob@dylan:~$
+bob@dylan:~$ curl "http://0.0.0.0:5000/api/v1/users" -H "Authorization: Test"
+{
+  "error": "Forbidden"
+}
+bob@dylan:~$
+```
+### 7. Basic - Base64 part
+Add the method `def extract_base64_authorization_header(self, authorization_header: str) -> str:` in the class `BasicAuth` that returns the Base64 part of the `Authorization` header for a Basic Authentication:
+* Return `None` if `authorization_header` is `None`
+* Return `None` if `authorization_header` is not a string
+* Return `None` if `authorization_header` doesn't start by `Basic` (with a space at the end)
+* Otherwise, return the value after `Basic`(after the space)
+* You can assume `authorization_header` contains only one `Basic`
+```
+### 8. Basic - Base64 decode
+Add the method `def decode_base64_authorization_header(self, base64_authorization_header: str) -> str:` in the class `BasicAuth` that returns the decoded value of a Base64 string `base64_authorization_header`:
+* Return `None` if `authorization_header` is `None`
+* Return `None` if `authorization_header` is not a string
+* Return `None` if `authorization_header` is not a valid Base64 - you can use `try/except`
+* Othewise, return the decoded value as UTF8 string - you can user `decode('utf-8')`
+```
+bob@dylan:~$ cat main_3.py
+#!/usr/bin/env python3
+""" Main 3
+"""
+from api.v1.auth.basic_auth import BasicAuth
 
+a = BasicAuth()
+
+print(a.decode_base64_authorization_header(None))
+print(a.decode_base64_authorization_header(89))
+print(a.decode_base64_authorization_header("Holberton School"))
+print(a.decode_base64_authorization_header("SG9sYmVydG9u"))
+print(a.decode_base64_authorization_header("SG9sYmVydG9uIFNjaG9vbA=="))
+print(a.decode_base64_authorization_header(a.extract_base64_authorization_header("Basic SG9sYmVydG9uIFNjaG9vbA==")))
+
+bob@dylan:~$
+bob@dylan:~$ API_HOST=0.0.0.0 API_PORT=5000 ./main_3.py
+None
+None
+None
+Holberton
+Holberton School
+Holberton School
+bob@dylan:~$
+bob@dylan:~$ cat main_3.py
+#!/usr/bin/env python3
+""" Main 3
+"""
+from api.v1.auth.basic_auth import BasicAuth
+
+a = BasicAuth()
+
+print(a.decode_base64_authorization_header(None))
+print(a.decode_base64_authorization_header(89))
+print(a.decode_base64_authorization_header("Holberton School"))
+print(a.decode_base64_authorization_header("SG9sYmVydG9u"))
+print(a.decode_base64_authorization_header("SG9sYmVydG9uIFNjaG9vbA=="))
+print(a.decode_base64_aution_header(a.extract_base64_authorization_header("Basic SG9sYmVydG9uIFNjaG9vbA==")))
+
+bob@dylan:~$
+bob@dylan:~$ API_HOST=0.0.0.0 API_PORT=5000 ./main_3.py
+None
+None
+None
+Holberton
+Holberton School
+Holberton School
+bob@dylan:~$
+
+Return None if base64_authorization_header is None
+Return None if base64_authorization_header is not a string
+Return None if base64_authorization_header is not a valid Base64 - you can use try/except
+Otherwise, return the decoded value as UTF8 string - you can use decode('utf-8')
+bob@dylan:~$ cat main_2.py
+#!/usr/bin/env python3
+""" Main 2
+"""
+from api.v1.auth.basic_auth import BasicAuth
+
+a = BasicAuth()
+
+print(a.extract_base64_authorization_header(None))
+print(a.extract_base64_authoriza
 
 ## Routes
 

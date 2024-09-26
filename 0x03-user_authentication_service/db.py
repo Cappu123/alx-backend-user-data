@@ -43,3 +43,47 @@ class DB:
             self._session.rollback()
             new_user = None
         return new_user
+
+    def find_user_by(self, **kwargs):
+        """Finds a specific user given set 
+        of filters"""
+        for key, value in kwargs.items():
+            if hasattr(User, key):
+                conditions = []
+                conditions.append(getattr(User, key) == value)
+            else:
+                raise InvalidRequestError()
+        result = self._session.query(User).filter((*conditions)).first()
+
+        if result is None:
+            raise NoResultFound()
+
+        return result
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -60,28 +60,18 @@ class DB:
 
         return result
 
-    def update_user(user_id: int, *kwargs) -> None:
+    def update_user(self, user_id: int, **kwargs) -> None:
         """Updates a specific user's attributes
         """
-        user = self._session.query(find_user_by(user_id))
+        user = self.find_user_by(id=user_id)
+        if user is None:
+            return
+        updated = {}
         for key, value in kwargs.items():
-            setattr(user, key) == value
-            self._session.add()
-            self._session.commit()
-        raise ValueError
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            if hasattr(User, key):
+                updated[getattr(User, key)] = value
+            else:
+                raise ValueError()
+        self._session.query(User).filter(User.id == user_id).update(
+            updated, synchronize_session=False,)
+        self._session.commit()

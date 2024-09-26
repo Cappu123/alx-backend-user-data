@@ -53,23 +53,12 @@ class DB:
                 conditions.append(getattr(User, key) == value)
             else:
                 raise InvalidRequestError()
-        result = self._session.query(User).filter((*conditions)).first()
+        result = self._session.query(User).filter(*conditions).first()
 
         if result is None:
             raise NoResultFound()
 
         return result
-                
-
-
-
-
-
-
-
-
-
-
 
 
 

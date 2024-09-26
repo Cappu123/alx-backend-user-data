@@ -60,6 +60,15 @@ class DB:
 
         return result
 
+    def update_user(user_id: int, *kwargs) -> None:
+        """Updates a specific user's attributes
+        """
+        user = self._session.query(find_user_by(user_id))
+        for key, value in kwargs.items():
+            setattr(user, key) == value
+            self._session.add()
+            self._session.commit()
+        raise ValueError
 
 
 
